@@ -5,7 +5,11 @@ from typing import Tuple
 class K_Means:
 
     def __init__(self, k: int) -> None:
+        assert k > 0, f"Number of clusters has to be greater than 0, got: {k}"
         self.k = k
+        self.fitted_centroids = None
+        self.dist_type = None
+        self.wcss = None
 
     def __calc_dist(self, xi: np.ndarray, xj: np.ndarray, dist_type: str) -> np.float64:
         if xi.shape != xj.shape:
@@ -40,10 +44,19 @@ class K_Means:
             if number_of_points_in_current_cluster > 0:
                 centroids[cluster] = np.sum(points_in_current_cluster, axis=0) / number_of_points_in_current_cluster
         return centroids
+    
+    def __calculate_wcss(self, data: np.ndarray, labels: np.ndarray, centroids: np.ndarray, dist_type: str) -> np.float64:
+        sum = np.float64(0)
+        for index in range(self.k):
+            indices = np.where(np.any(labels == index, axis=1))
+            points_in_current_cluster = data[indices]
+            sum += np.sum((points_in_current_cluster - centroids[index]) ** 2)
+        return sum
 
     def fit_predict(self, data: np.ndarray, dist_type: str = 'euclidean', max_iter: int = 20) -> Tuple[np.ndarray,np.ndarray,int]:
         if isinstance(data, pd.DataFrame):
             data = data.to_numpy()
+        self.dist_type = dist_type
         old_labels: np.ndarray = np.empty((data.shape[0], 1))
         new_labels: np.ndarray = np.random.randint(self.k, size=(data.shape[0], 1)) 
         # initialize randomly the centroids
@@ -57,4 +70,30 @@ class K_Means:
             # update the centroid locations based on the new labels 
             centroids = self.__update_centroids(n=self.k, data=data, labels=new_labels, centroids=centroids)
             i += 1
+        self.fitted_centroids = centroids
+        self.wcss = self.__calculate_wcss(data, new_labels, centroids, dist_type)
         return (new_labels, centroids, i)
+
+    def predict(self, data: np.ndarray) -> np.ndarray:
+        if self.fitted_centroids is None:
+            print('K-means object has to be fitted before use')
+            return None
+        if isinstance(data, pd.DataFrame):
+            data = data.to_numpy()
+        return self.__label_data(data, self.fitted_centroids,self.dist_type)
+
+    @property
+    def cluster_centers_(self):
+        if self.fitted_centroids is None:
+            print('K-means object has to be fitted before getting centroids')
+            return None
+        else:
+            return self.fitted_centroids
+
+    @property
+    def inertia_(self):
+        if self.wcss is None:
+            print('K-means object has to be fitted before getting inertia')
+            return None
+        else:
+            return self.wcss

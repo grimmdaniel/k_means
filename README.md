@@ -1,7 +1,7 @@
 # k_means
-Numpy implementation of K-means clustering algorithm.
+Numpy implementation of k-means clustering algorithm.
 
-Supports Pandas DataFrame and Numy ndarrays as input format.
+Supports Pandas DataFrame and Numpy ndarrays as input format.
 
 ## Parameters
 
